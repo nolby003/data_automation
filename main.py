@@ -129,8 +129,8 @@ def create_connection0():
 def create_connection():
     connection = mysql.connector.connect(
     host='bnolan-mysql-temp.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
-    user='admin',
-    password='7sUTea0N7iafm47LiqHN',
+    user='',
+    password='',
     database='bnolan-mysql-temp',
     port=3306 # or 5432 for PostgreSQL        
     )
