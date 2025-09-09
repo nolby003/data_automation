@@ -1,15 +1,91 @@
-import boto3
+# Data Automation Script
+# Migrate data from excel or Google sheets to AWS RDS
+
+
+# Build pipelines excel file - lists all Source files by type (gsheet, excel)
+    # Build out table fields and expected data types
+
+
+# import boto3
 from sys import argv
 import argparse
 import pandas as pd
 import mysql.connector
 import pymysql
-import psycopg2
+# import psycopg2
+import os
+from pathlib import Path
 
-def load_data_from_excel():
-    # load excel file into dataframe
-    df = pd.read_excel("your_excel_file.xlsx")
-    return df
+# get current working directory
+def get_realcwd():  
+    pathToHere = Path(__file__)
+    parts = list(pathToHere.parts)
+    folders = parts[:-1]
+    folder_path = str(Path(*folders))
+    # print(folders)
+    # print(folder_path)
+    return folder_path
+
+inputDirPath = get_realcwd() + '/input'
+inputDir = os.listdir(inputDirPath)
+outputDirPath = get_realcwd() + '/output'
+pipelinesFile = inputDirPath + '/pipelines.xlsx'
+excelFileTypes = ['xlsx', 'xls']
+
+# define google sheet info here
+# sheetName = 'dim_customers'
+# sheetId = '1O4PluV9MdRHJyZZlNCAIGXMfcOJWNFEOML_Z5WyZyk4'
+# url = f'https://docs.google.com/spreadsheets/d/{sheetId}/gviz/tq?tqx=out:csv&sheet={sheetName}'
+
+# load pipelines
+def load_pipelines():
+    try:
+        pipelines = pd.read_excel(pipelinesFile, sheet_name='Source')
+        # print(pipelines.columns)
+        for _, row in pipelines.iterrows():
+            if row['type'] == 'gsheet': # for all google sheets
+                table = row['sheet']
+                sheet = row['sheet']
+                sheetId = row['id']
+                url = f'https://docs.google.com/spreadsheets/d/{sheetId}/gviz/tq?tqx=out:csv&sheet={sheet}'
+                data = pd.read_csv(url)
+                toCSV = os.path.join(outputDirPath, f"{sheet}.csv")
+                data.to_csv(toCSV, header=True, index=False)
+                toExcel = os.path.join(outputDirPath, f"{sheet}.xlsx")
+                data.to_excel(toExcel, header=True, index=False)
+            elif row['type'] == 'excel': # for all excel sheets
+                print('foo')            
+    except Exception as e:
+        print(f'Error exception: {e}')    
+
+# load data from google sheet
+def load_data_from_gsheet(sheetName, sheetId, url):
+    try:
+        data = pd.read_csv(url)
+        return data
+    except Excception as e:
+        print(f'Error reading google sheet: {e}')    
+
+def import_files():
+    files_df = []
+    for file in config.inputDir:
+        path = str(file)
+        file_split = file.split(sep='.')
+        if file_split[1] in config.excelFileTypes:
+            values = [path]
+            files_df.append(values)
+            print(f'Added File: {file}')
+        else:
+            print(f'Invalid filetype: {file_split[1]}')
+    print(f'Files df: {files_df}\n')
+    return files_df
+
+def read_file_contents(file):
+    f = open(file)
+    c = f.read()
+    print(f'File contents of {file}: \n{c}\n')
+    f.close()
+    return c                
 
 # make connection to AWS RDS using pymysql
 def create_connection0():
@@ -64,7 +140,13 @@ def select_records(connection, table):
         print(row)
 
 def main():
-    connection = create_connection()
+    # connection = create_connection()
+    # data = load_data_from_gsheet(sheetName, sheetId, url)
+    # fields = data.columns
+    # print(data.dtypes)
+    load_pipelines()
 
+if __name__ == '__main__':
+    main()
 # cursor.close()
 # connection2.close()
