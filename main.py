@@ -121,7 +121,7 @@ def sqlalch_create_connection():
     try:
         host='bnolan-database-1-postgres.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
         user='postgres',
-        password='js732W9zvw60RW4eVQ7D',
+        password='',
         dbname='postgres',
         port=5432 # 3306 or 5432 for PostgreSQL   
         engine = create_engine(f'postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}')
@@ -138,7 +138,7 @@ def pymysql_create_connection():
         connection = pymysql.connect(
             host='bnolan-database-1-mysql.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
             user='admin',
-            password='QHH1cpetATLpAnzMqbTi',
+            password='',
             database='',
             port=3306 # 3306 or 5432 for PostgreSQL    
         )
