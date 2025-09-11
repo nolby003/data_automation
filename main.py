@@ -12,7 +12,8 @@ import argparse
 import pandas as pd
 import mysql.connector
 import pymysql
-# import psycopg2
+# import psycopg
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String
 import os
 from pathlib import Path
 
@@ -113,26 +114,51 @@ def ready_pipelines():
 
     print(f"✅ All CREATE TABLE statements saved to {output_excel}")
 
-# make connection to AWS RDS using pymysql
-def create_connection0():
-    # ... (replace with your RDS details)
-    connection2 = pymysql.connect(
-        host='your-rds-endpoint.us-east-1.rds.amazonaws.com',
-        user='your_username',
-        password='your_password',
-        database='your_database_name',
-        port=3306 # or 5432 for PostgreSQL
-    )
-    cursor = connection2.cursor() 
+# works
+def sqlalch_create_connection():
+    try:
+        host='bnolan-database-1-instance-1.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
+        user='postgres',
+        password='js732W9zvw60RW4eVQ7D',
+        dbname='postgres',
+        port=5432 # 3306 or 5432 for PostgreSQL   
+        engine = create_engine(f'postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}')
+        # engine = create_engine('mysql+pymysql://user:password@host:port/database_name')
+        print("Connection to PostgreSQL successful!")
+        return engine
+    except Exception as e:
+        print(f"Error connecting to PostgreSQL: {e}")
 
+        
+# make connection to AWS RDS using pymysql (MySQL)
+def pymysql_create_connection():
+    try:
+        connection = pymysql.connect(
+            host='database-1.cluster-cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
+            user='admin',
+            password='UboEgNksatKBK5uega34',
+            database='mysql',
+            port=3306 # 3306 or 5432 for PostgreSQL    
+        )
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT VERSION()")
+            result = cursor.fetchone()
+            print("Connected to AWS RDS successfully!")
+    except pymysql.Error as e:
+        print(f"Error connecting to RDS: {e}")
+    finally:
+        if 'connection' in locals() and connection.open:
+            connection.close()
+            print("Connection closed.")    
+     
 # make connection to AWS RDS using mysql.connector
-def create_connection():
+def mysqlconn_create_connection():
     connection = mysql.connector.connect(
-    host='bnolan-mysql-temp.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
-    user='admin',
-    password='7sUTea0N7iafm47LiqHN',
-    database='bnolan-mysql-temp',
-    port=3306 # or 5432 for PostgreSQL        
+        host='bnolan-database-1-instance-1.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
+        user='postgres',
+        password='js732W9zvw60RW4eVQ7D',
+        database='postgres',
+        port=5432 # 3306 or 5432 for PostgreSQL      
     )
     return connection
 
@@ -142,14 +168,22 @@ def create_table(connection, table, fields):
     cursor.execute(f'CREATE TABLE IF NOT EXISTS {table} ({fields})')
 
     # create table function
-def create_table_from_file():
-    file_path = os.path.join(outputDirPath, 'create_table_statements.xlsx')
-    df = pd.read_excel(file_path, nrows=2, header=None)
-    for _, row in df.iterrows():
-        statement = row['create_statement']
-    cursor = connection.cursor()
-    cursor.execute(statement)
-
+def create_table_from_file(engine):
+    try:
+        file_path = os.path.join(outputDirPath, 'create_table_statements.xlsx')
+        df = pd.read_excel(file_path, nrows=2, header=None)
+        for _, row in df.iterrows():
+            statement = row['create_statement']
+            table = row['table_name']
+            with engine.connect() as connection:
+                connection.execute(text(statement))
+                connection.commit()
+        # cursor = connection.cursor()
+        #cursor.execute(statement)
+        
+        print(f'Table {table} created.')
+    except Exception as e:
+        print(f"Error creating table to PostgreSQL: {e}")   
 # insert record function
 def insert_record(connection, table, fields, values):
     cursor = connection.cursor()
@@ -184,8 +218,9 @@ def main():
     # Step 2
     # ready_pipelines()
     # Step 3
-    connection = create_connection()
-    # create_table_from_file()
+    pymysql_create_connection()
+    # engine = sqlalch_create_connection()
+    # create_table_from_file(engine)
 
 if __name__ == '__main__':
     main()
