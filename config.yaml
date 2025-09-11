@@ -1,0 +1,14 @@
+params: {
+  # 1 - Excel
+  # 2 - Google Sheets
+  # 3 - postgres
+  # 4 - MySQL
+  # 5 - RedShift
+  # 6 - Oracle
+  src_db_type: 2,
+  # 1 - postgres
+  # 2 - MySQK
+  # 3 - Redshift
+  # 4 - Oracle
+  dest_db_type: 1
+  }

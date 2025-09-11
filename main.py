@@ -7,6 +7,8 @@
 # version: 1.0
 
 # import boto3
+import yaml
+import config
 from sys import argv
 import argparse
 import pandas as pd
@@ -117,7 +119,7 @@ def ready_pipelines():
 # works
 def sqlalch_create_connection():
     try:
-        host='bnolan-database-1-instance-1.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
+        host='bnolan-database-1-postgres.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
         user='postgres',
         password='js732W9zvw60RW4eVQ7D',
         dbname='postgres',
@@ -134,10 +136,10 @@ def sqlalch_create_connection():
 def pymysql_create_connection():
     try:
         connection = pymysql.connect(
-            host='database-1.cluster-cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
+            host='bnolan-database-1-mysql.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
             user='admin',
-            password='UboEgNksatKBK5uega34',
-            database='mysql',
+            password='QHH1cpetATLpAnzMqbTi',
+            database='',
             port=3306 # 3306 or 5432 for PostgreSQL    
         )
         with connection.cursor() as cursor:
