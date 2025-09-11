@@ -158,7 +158,7 @@ def mysqlconn_create_connection():
     connection = mysql.connector.connect(
         host='bnolan-database-1-instance-1.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
         user='postgres',
-        password='js732W9zvw60RW4eVQ7D',
+        password='',
         database='postgres',
         port=5432 # 3306 or 5432 for PostgreSQL      
     )
