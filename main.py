@@ -3,47 +3,29 @@
 # author: Benjamin Nolan
 # Description: main program
 # date created: 09-09-2025
-# date modified: 09-09-2025
+# date modified: 12-09-2025
 # version: 1.0
 
 # import boto3
-import yaml
 import config
-from sys import argv
-import argparse
 import pandas as pd
-import mysql.connector
-import pymysql
-# import psycopg
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String
 import os
-from pathlib import Path
+import sql_connectors
 
-# get current working directory
-def get_realcwd():  
-    pathToHere = Path(__file__)
-    parts = list(pathToHere.parts)
-    folders = parts[:-1]
-    folder_path = str(Path(*folders))
-    return folder_path
-
-# Define input and out folders
-inputDirPath = get_realcwd() + '/input'
-inputDir = os.listdir(inputDirPath)
-outputDirPath = get_realcwd() + '/output'
-
-pipelinesFile = inputDirPath + '/pipelines.xlsx'
-
-# Valid excel file types
-excelFileTypes = ['xlsx', 'xls']
-
+# -------------------------------
 # load pipelines
-# load a list of gsheets listed from the pipelines file
-# creates an excel file with all the data
-# creates a csv with columns and no data (requires filling in column values on row 2 with python data types)
+# -------------------------------
+"""
+load a list of gsheets listed from the pipelines file
+creates an excel file with all the data
+creates a csv with columns and no data (requires filling in column values on row 2 with python data types)
+"""
 def load_pipelines():
     try:
-        pipelines = pd.read_excel(pipelinesFile, sheet_name='Source')
+        if os.path.exists(config.pipelinesFile):
+            pipelines = pd.read_excel(config.pipelinesFile, sheet_name='Source')
+        else:
+            print('Pipelines file is missing, required.')    
         for _, row in pipelines.iterrows():
             if row['type'] == 'gsheet': # for all google sheets
                 table = row['sheet']
@@ -51,17 +33,20 @@ def load_pipelines():
                 sheetId = row['id']
                 url = f'https://docs.google.com/spreadsheets/d/{sheetId}/gviz/tq?tqx=out:csv&sheet={sheet}'
                 data = pd.read_csv(url)
-                toCSV = os.path.join(outputDirPath, f"{sheet}.csv")
+                toCSV = os.path.join(config.outputDirPath, f"{sheet}.csv")
                 empty_df = pd.DataFrame(columns=data.columns)
                 empty_df.to_csv(toCSV, header=True, index=False)
-                toExcel = os.path.join(outputDirPath, f"{sheet}.xlsx")
+                toExcel = os.path.join(config.outputDirPath, f"{sheet}.xlsx")
                 data.to_excel(toExcel, header=True, index=False)
             elif row['type'] == 'excel': # for all excel sheets
                 print('foo')            
     except Exception as e:
         print(f'Error exception: {e}')    
+# -------------------------------
 
-# convert pythong datatypes to SQL datatypes
+# -------------------------------
+# convert python datatypes to SQL datatypes from csv file
+# -------------------------------
 def python_to_sql_conversion(python_type):
     type_map = {
         "int": "BIGINT",
@@ -83,20 +68,26 @@ def python_to_sql_conversion(python_type):
         key = python_type
     else:
         key = str(python_type)
+    
     return type_map.get(key) 
+# -------------------------------
 
+# -------------------------------
 # build pipelines
-# load in the csv files with the pythong datatypes
-# pass conversion to get SQL datatypes for each field
-# build an excel file with each row a create table statement in prep for creating tables on destination RDS
+# -------------------------------
+"""
+load in the csv files with the pythong datatypes
+pass conversion to get SQL datatypes for each field
+build an excel file with each row a create table statement in prep for creating tables on destination RDS
+"""
 def ready_pipelines():
     
     create_table_statements = []
-    output_excel = os.path.join(outputDirPath, 'create_table_statements.xlsx')
+    output_excel = os.path.join(config.outputDirPath, 'create_table_statements.xlsx')
 
-    for file in os.listdir(outputDirPath):
+    for file in os.listdir(config.outputDirPath):
         if file.endswith(".csv"):
-            file_path = os.path.join(outputDirPath, file)
+            file_path = os.path.join(config.outputDirPath, file)
             df = pd.read_csv(file_path, nrows=2, header=None)
 
             table_name = os.path.splitext(file)[0]
@@ -116,63 +107,19 @@ def ready_pipelines():
 
     print(f"✅ All CREATE TABLE statements saved to {output_excel}")
 
-# works
-def sqlalch_create_connection():
-    try:
-        host='bnolan-database-1-postgres.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
-        user='postgres',
-        password='',
-        dbname='postgres',
-        port=5432 # 3306 or 5432 for PostgreSQL   
-        engine = create_engine(f'postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}')
-        # engine = create_engine('mysql+pymysql://user:password@host:port/database_name')
-        print("Connection to PostgreSQL successful!")
-        return engine
-    except Exception as e:
-        print(f"Error connecting to PostgreSQL: {e}")
-
-        
-# make connection to AWS RDS using pymysql (MySQL)
-def pymysql_create_connection():
-    try:
-        connection = pymysql.connect(
-            host='bnolan-database-1-mysql.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
-            user='admin',
-            password='',
-            database='',
-            port=3306 # 3306 or 5432 for PostgreSQL    
-        )
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT VERSION()")
-            result = cursor.fetchone()
-            print("Connected to AWS RDS successfully!")
-    except pymysql.Error as e:
-        print(f"Error connecting to RDS: {e}")
-    finally:
-        if 'connection' in locals() and connection.open:
-            connection.close()
-            print("Connection closed.")    
-     
-# make connection to AWS RDS using mysql.connector
-def mysqlconn_create_connection():
-    connection = mysql.connector.connect(
-        host='bnolan-database-1-instance-1.cncvguhmaslw.ap-southeast-2.rds.amazonaws.com',
-        user='postgres',
-        password='',
-        database='postgres',
-        port=5432 # 3306 or 5432 for PostgreSQL      
-    )
-    return connection
-
+# -------------------------------
 # create table function
+# -------------------------------
 def create_table(connection, table, fields):
     cursor = connection.cursor()
     cursor.execute(f'CREATE TABLE IF NOT EXISTS {table} ({fields})')
 
-    # create table function
+# -------------------------------
+# create table function - from file
+# -------------------------------
 def create_table_from_file(engine):
     try:
-        file_path = os.path.join(outputDirPath, 'create_table_statements.xlsx')
+        file_path = os.path.join(config.outputDirPath, 'create_table_statements.xlsx')
         df = pd.read_excel(file_path, nrows=2, header=None)
         for _, row in df.iterrows():
             statement = row['create_statement']
@@ -186,23 +133,38 @@ def create_table_from_file(engine):
         print(f'Table {table} created.')
     except Exception as e:
         print(f"Error creating table to PostgreSQL: {e}")   
+
+# -------------------------------        
 # insert record function
+# -------------------------------
 def insert_record(connection, table, fields, values):
     cursor = connection.cursor()
     cursor.execute(f'INSERT INTO {table} ({fields}) VALUES ({values})')
 
+# -------------------------------
+# update record function
+# -------------------------------
 def update_record(connection, table, field, value, wfield, wvalue):
     cursor = connection.cursor()
     cursor.execute(f'UPDATE {table} SET {field} = {value} WHERE {wfield} = {wvalue}') 
 
+# -------------------------------
+# delete record function
+# -------------------------------
 def delete_record(connection, table, wfield, wvalue):
     cursor = connection.cursor()
     cursor.execute(f'DELETE FROM {table} WHERE {wfield} = {wvalue}')
  
+# -------------------------------
+# drop table function
+# ------------------------------- 
 def drop_table(connection, table):
     cursor = connection.cursor()
     cursor.execute(f'DROP {table}')
 
+# -------------------------------
+# select records function
+# -------------------------------
 def select_records(connection, table):
     cursor = connection.cursor()
     cursor.execute(f'SELECT * FROM {table}')
@@ -210,21 +172,31 @@ def select_records(connection, table):
     for row in rows:
         print(row)
 
+# -------------------------------
+# Main program
+# -------------------------------
 def main():
     # data = load_data_from_gsheet(sheetName, sheetId, url)
     # fields = data.columns
     # print(data.dtypes)
+    
     # Step 1
     # load_pipelines()
     # python_to_sql_conversion(int)
+    
     # Step 2
     # ready_pipelines()
+    
     # Step 3
-    pymysql_create_connection()
-    # engine = sqlalch_create_connection()
+    if config.dest_db == 1:
+        sql_connectors.mysql_create_connection()
+    elif config.dest_db == 2:
+        sql_connectors.postgres_create_connection()    
+    
     # create_table_from_file(engine)
 
 if __name__ == '__main__':
     main()
+    
 # cursor.close()
 # connection2.close()
