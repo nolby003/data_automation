@@ -2,7 +2,6 @@ boto3
 numpy
 pandas
 pymysql 
-# psycopg2
+psycopg2-binary
 mysql.connector
 openai
-yml
