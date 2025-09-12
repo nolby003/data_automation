@@ -1,6 +1,13 @@
-import os, env
+# Data Automation Script
+# ai_datatype.py
+# author: Benjamin Nolan
+# Description: Use GenAI to determine datatype based on passed word 
+# date created: 09-09-2025
+# date modified: 12-09-2025
+# version: 1.0
+import os
 import openai
-API_KEY = os.env.get(API_KEY)
+API_KEY = os.environ.get('API_KEY')
 ai_model = 'gpt-3.5-turbo'
 prompt = 'The task is to give me the SQL data type for the given field name.'
 conversation = [
